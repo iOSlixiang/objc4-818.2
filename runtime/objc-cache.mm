@@ -822,7 +822,7 @@ void cache_t::bad_cache(id receiver, SEL sel)
         ("Method cache corrupted. This may be a message to an "
          "invalid object, or a memory error somewhere else.");
 }
-
+/// insert() 函数处理添加缓存逻辑, 其中也包含散列表扩容等操作
 void cache_t::insert(SEL sel, IMP imp, id receiver)
 {
     runtimeLock.assertLocked();
@@ -851,11 +851,13 @@ void cache_t::insert(SEL sel, IMP imp, id receiver)
     unsigned oldCapacity = capacity(), capacity = oldCapacity;
     if (slowpath(isConstantEmptyCache())) {
         // Cache is read-only. Replace it.
+        // 如果散列表是空的, 就进行空间申请, 默认大小为4
         if (!capacity) capacity = INIT_CACHE_SIZE;
         reallocate(oldCapacity, capacity, /* freeOld */false);
     }
     else if (fastpath(newOccupied + CACHE_END_MARKER <= cache_fill_ratio(capacity))) {
         // Cache is less than 3/4 or 7/8 full. Use it as-is.
+        // 如果占用空间小于 3/4 or 7/8 则不做处理 继续使用
     }
 #if CACHE_ALLOW_FULL_UTILIZATION
     else if (capacity <= FULL_UTILIZATION_CACHE_SIZE && newOccupied + CACHE_END_MARKER <= capacity) {
@@ -863,6 +865,7 @@ void cache_t::insert(SEL sel, IMP imp, id receiver)
     }
 #endif
     else {
+        // 如果超过的话, 会进行 *2 倍的大小扩容, 但是不能超过MAX_CACHE_SIZE(1<<16)
         capacity = capacity ? capacity * 2 : INIT_CACHE_SIZE;
         if (capacity > MAX_CACHE_SIZE) {
             capacity = MAX_CACHE_SIZE;
@@ -870,16 +873,19 @@ void cache_t::insert(SEL sel, IMP imp, id receiver)
         reallocate(oldCapacity, capacity, true);
     }
 
-    bucket_t *b = buckets();
+    bucket_t *b = buckets();             // 拿到散列表
     mask_t m = capacity - 1;
-    mask_t begin = cache_hash(sel, m);
+    mask_t begin = cache_hash(sel, m);   // 根据sel 和 当前容量计算哈希
     mask_t i = begin;
 
     // Scan for the first unused slot and insert there.
     // There is guaranteed to be an empty slot.
+    // 根据哈希将sel放进散列表, 如果当前idx已存放了imp, 则进行cache_next()计算新的idx
     do {
         if (fastpath(b[i].sel() == 0)) {
+            // 将当前占用空间+1 然后更新成员属性
             incrementOccupied();
+            // 将当前占用空间+1 然后更新成员属性
             b[i].set<Atomic, Encoded>(b, sel, imp, cls());
             return;
         }

@@ -450,16 +450,16 @@ public:
     // objcdt reaches into fields while the process is suspended
     // hence doesn't care for locks and pesky little details like this
     // and can safely use these.
-    unsigned capacity() const;
-    struct bucket_t *buckets() const;
-    Class cls() const;
+    unsigned capacity() const;         /// 散列表的容量
+    struct bucket_t *buckets() const;  /// 真是记录缓存的散列表
+    Class cls() const;                 /// 对应的类
 
 #if CONFIG_USE_PREOPT_CACHES
     const preopt_cache_t *preopt_cache() const;
 #endif
 
-    mask_t occupied() const;
-    void initializeToEmpty();
+    mask_t occupied() const;      /// 散列表已占用的数量
+    void initializeToEmpty();     /// 初始化方法
 
 #if CONFIG_USE_PREOPT_CACHES
     bool isConstantOptimizedCache(bool strict = false, uintptr_t empty_addr = (uintptr_t)&_objc_empty_cache) const;
@@ -477,10 +477,10 @@ public:
     inline void initializeToEmptyOrPreoptimizedInDisguise() { initializeToEmpty(); }
 #endif
 
-    void insert(SEL sel, IMP imp, id receiver);
-    void copyCacheNolock(objc_imp_cache_entry *buffer, int len);
-    void destroy();
-    void eraseNolock(const char *func);
+    void insert(SEL sel, IMP imp, id receiver); /// 插入方法
+    void copyCacheNolock(objc_imp_cache_entry *buffer, int len); /// 复制缓存
+    void destroy();                            /// 销毁
+    void eraseNolock(const char *func);        /// 全部擦除
 
     static void init();
     static void collectNolock(bool collectALot);
